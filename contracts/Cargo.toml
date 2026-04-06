@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "evidence-registry",
+    "dispute-resolution",
+    "trust-ledger",
+]
+
+[workspace.dependencies]
+soroban-sdk = "25.3.0"
