@@ -1,0 +1,17 @@
+{
+  "name": "verdikt",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && WATCHPACK_POLLING=true npm run dev -- --turbopack",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "seed": "npx tsx scripts/seed-demo.ts",
+    "deploy-contracts": "bash scripts/deploy-contracts.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "tsx": "^4.19.0"
+  }
+}
