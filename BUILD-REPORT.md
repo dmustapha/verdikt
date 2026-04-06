@@ -20,6 +20,7 @@ Builder: hackathon-build skill
 |----|-----------|-------------------|--------|--------|-------------------|
 | DEV-001 | scripts/deploy-contracts.sh | WASM path `target/wasm32-unknown-unknown/release/...` | WASM path `target/wasm32v1-none/release/...` | stellar-cli 25.2.0 targets wasm32v1-none, not wasm32-unknown-unknown | Updated deploy-contracts.sh to use correct path. No other impact. |
 | DEV-002 | contracts/Cargo.toml | `[profile.release]` in each crate's Cargo.toml | Moved to workspace root `contracts/Cargo.toml` | Cargo workspace ignores package-level profiles — must be in workspace root | Removed per-crate profile sections (still present but ignored). Build works correctly. |
+| DEV-003 | contracts/dispute-resolution/src/lib.rs | `contractimport!` path `../trust-ledger/target/wasm32-unknown-unknown/release/verdikt_trust_ledger.wasm` | Path `../target/wasm32v1-none/release/verdikt_trust_ledger.wasm` | (1) Workspace uses shared target dir, not per-crate. (2) stellar-cli 25.2.0 uses wasm32v1-none. Path is relative to dispute-resolution crate dir. | None — correct path resolves successfully. contractimport! works. |
 
 ## Failed Attempts & Resolutions
 | Step | Error | Attempts | Resolution |
