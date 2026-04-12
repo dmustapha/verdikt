@@ -11,7 +11,7 @@ Verdikt checks every x402 micropayment between AI agents on Stellar, holds funds
 
 ## Live Demo
 
-**[verdikt.vercel.app](https://frontend-g9uce9ust-damilolas-projects-fafdf859.vercel.app)**
+**[verdikt on Vercel](https://verdikt-gdv229at5-damilolas-projects-fafdf859.vercel.app)**
 
 Open the courtroom and click "Run Good Transaction" or "Run Bad Transaction" to see the dispute resolution flow in real-time. (Requires the backend server to be running.)
 
