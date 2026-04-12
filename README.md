@@ -197,6 +197,8 @@ cd frontend && npm install && npm run dev
 
 ## Project Structure
 
+**Backend API:** [verdikt-backend.onrender.com](https://verdikt-backend.onrender.com)
+
 ```
 verdikt/
   backend/
