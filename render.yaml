@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: verdikt-backend
+    runtime: node
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: ESCROW_SECRET
+        sync: false
+      - key: ESCROW_PUBLIC
+        sync: false
+      - key: BUYER_SECRET
+        sync: false
+      - key: BUYER_PUBLIC
+        sync: false
+      - key: SELLER_SECRET
+        sync: false
+      - key: SELLER_PUBLIC
+        sync: false
+      - key: EVIDENCE_REGISTRY_ID
+        sync: false
+      - key: TRUST_LEDGER_ID
+        sync: false
+      - key: DISPUTE_RESOLUTION_ID
+        sync: false
+      - key: SOROBAN_RPC
+        value: https://soroban-testnet.stellar.org
+      - key: HORIZON_URL
+        value: https://horizon-testnet.stellar.org
+      - key: OZ_FACILITATOR_URL
+        value: https://channels.openzeppelin.com/x402/testnet
+      - key: OZ_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
