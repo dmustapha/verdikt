@@ -3,7 +3,16 @@ dist/
 .next/
 .env
 .env.local
+.env*.local
 target/
 bindings/
 *.wasm
 .DS_Store
+*.log
+build/
+.vercel
+.claude/
+artifacts/
+cache/
+*.db
+*.sqlite

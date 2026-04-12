@@ -1,5 +1,20 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, panic_with_error, symbol_short};
+
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum Error {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    Unauthorized = 3,
+    NotFound = 4,
+}
+
+const INSTANCE_TTL_THRESHOLD: u32 = 17_280;
+const INSTANCE_TTL_EXTEND: u32 = 535_680;
+const PERSISTENT_TTL_THRESHOLD: u32 = 17_280;
+const PERSISTENT_TTL_EXTEND: u32 = 3_110_400;
 
 // Import TrustLedger client (generated from trust-ledger contract)
 // At build time, this is available via the trust_ledger contract's public interface.
@@ -45,11 +60,15 @@ pub struct DisputeResolution;
 impl DisputeResolution {
     pub fn init(env: Env, admin: Address, trust_ledger_id: Address) {
         admin.require_auth();
+        if env.storage().instance().has(&DataKey::Admin) {
+            panic_with_error!(&env, Error::AlreadyInitialized);
+        }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
             .instance()
             .set(&DataKey::TrustLedgerId, &trust_ledger_id);
         env.storage().instance().set(&DataKey::NextId, &0u64);
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND);
     }
 
     pub fn record_verdict(
@@ -62,10 +81,14 @@ impl DisputeResolution {
         verdict: Verdict,
     ) -> u64 {
         arbiter.require_auth();
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        assert!(arbiter == admin, "only admin");
+        let admin: Address = env.storage().instance().get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized));
+        if arbiter != admin {
+            panic_with_error!(&env, Error::Unauthorized);
+        }
 
-        let id: u64 = env.storage().instance().get(&DataKey::NextId).unwrap();
+        let id: u64 = env.storage().instance().get(&DataKey::NextId)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized));
         let timestamp = env.ledger().timestamp();
 
         env.storage().persistent().set(
@@ -86,7 +109,7 @@ impl DisputeResolution {
             .storage()
             .instance()
             .get(&DataKey::TrustLedgerId)
-            .unwrap();
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized));
         let trust_client = trust_ledger::Client::new(&env, &trust_ledger_id);
 
         let trust_verdict = match verdict {
@@ -97,6 +120,13 @@ impl DisputeResolution {
 
         trust_client.update_trust(&arbiter, &seller, &trust_verdict);
 
+        // Extend TTLs
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND);
+        env.storage().persistent().extend_ttl(&DataKey::Dispute(id), PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND);
+
+        // Emit event
+        env.events().publish((symbol_short!("verdict"),), id);
+
         id
     }
 
@@ -104,7 +134,7 @@ impl DisputeResolution {
         env.storage()
             .persistent()
             .get(&DataKey::Dispute(dispute_id))
-            .unwrap()
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotFound))
     }
 
     pub fn get_count(env: Env) -> u64 {

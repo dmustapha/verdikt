@@ -1,5 +1,19 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, panic_with_error, symbol_short};
+
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum Error {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    Unauthorized = 3,
+}
+
+const INSTANCE_TTL_THRESHOLD: u32 = 17_280;
+const INSTANCE_TTL_EXTEND: u32 = 535_680;
+const PERSISTENT_TTL_THRESHOLD: u32 = 17_280;
+const PERSISTENT_TTL_EXTEND: u32 = 3_110_400;
 
 #[derive(Clone, PartialEq)]
 #[contracttype]
@@ -51,13 +65,20 @@ fn compute_tier(score: i64) -> TrustTier {
 impl TrustLedger {
     pub fn init(env: Env, admin: Address) {
         admin.require_auth();
+        if env.storage().instance().has(&DataKey::Admin) {
+            panic_with_error!(&env, Error::AlreadyInitialized);
+        }
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND);
     }
 
     pub fn update_trust(env: Env, caller: Address, agent: Address, verdict: Verdict) {
         caller.require_auth();
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        assert!(caller == admin, "only admin");
+        let admin: Address = env.storage().instance().get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotInitialized));
+        if caller != admin {
+            panic_with_error!(&env, Error::Unauthorized);
+        }
 
         let mut data: TrustData = env
             .storage()
@@ -71,18 +92,17 @@ impl TrustLedger {
                 tier: TrustTier::Untrusted,
             });
 
-        data.total_tx += 1;
-
         match verdict {
             Verdict::Valid => {
+                data.total_tx += 1;
                 data.score += 10;
                 data.successful += 1;
             }
             Verdict::Partial => {
-                data.score -= 25;
-                data.disputes_lost += 1;
+                // Trust-neutral: ambiguous delivery doesn't count toward total_tx or successful
             }
             Verdict::Guilty => {
+                data.total_tx += 1;
                 data.score -= 50;
                 data.disputes_lost += 1;
             }
@@ -97,7 +117,14 @@ impl TrustLedger {
 
         env.storage()
             .persistent()
-            .set(&DataKey::Trust(agent), &data);
+            .set(&DataKey::Trust(agent.clone()), &data);
+
+        // Extend TTLs
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND);
+        env.storage().persistent().extend_ttl(&DataKey::Trust(agent), PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND);
+
+        // Emit event
+        env.events().publish((symbol_short!("trust"),), data.score);
     }
 
     pub fn get_trust(env: Env, agent: Address) -> TrustData {
