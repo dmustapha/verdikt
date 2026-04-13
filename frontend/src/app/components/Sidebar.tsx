@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWebSocket } from '../providers/WebSocketProvider';
@@ -53,7 +54,7 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <nav className="vk-sidebar" aria-label="Main navigation">
         <Link href="/" className="vk-sidebar-logo" aria-label="Verdikt home">
-          VERDIKT
+          <Image src="/logo-192.png" alt="Verdikt" width={32} height={32} style={{ borderRadius: 6 }} />
         </Link>
 
         <div className="vk-sidebar-nav">
